@@ -36,7 +36,7 @@ namespace ofxZED
 		if (zederr != sl::SUCCESS)
 		{
 			close();
-			ofLog() << "ERROR: " << sl::errorCode2str(zederr).c_str() << endl;
+			ofLog() << "ERROR: " << sl::toString(zederr).c_str() << endl;
 			return;
 		}
 		else
@@ -53,7 +53,7 @@ namespace ofxZED
 			if (zederr != sl::SUCCESS)
 			{
 				close();
-				ofLog() << "ERROR: " << sl::errorCode2str(zederr).c_str() << endl;
+				ofLog() << "ERROR: " << sl::toString(zederr).c_str() << endl;
 				return;
 			}
 		}
@@ -181,7 +181,7 @@ namespace ofxZED
 							depthLeftTexture.loadData(this->dl.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
-							ofLogError() << sl::errorCode2str(ret).c_str() << endl;
+							ofLogError() << sl::toString(ret).c_str() << endl;
 						}
 					}
 					{
@@ -190,7 +190,7 @@ namespace ofxZED
 							depthRightTexture.loadData(this->dr.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
-							ofLogError() << sl::errorCode2str(ret).c_str() << endl;
+							ofLogError() << sl::toString(ret).c_str() << endl;
 						}
 					}
 				}

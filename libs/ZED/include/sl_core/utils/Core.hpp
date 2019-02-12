@@ -418,7 +418,7 @@ namespace sl {
         \note If the current Mat is not allocated or has a not a compatible \ref MAT_TYPE or \ref Resolution with the source,
         current memory is freed and new memory is directly allocated.
          */
-        ERROR_CODE setFrom(const Mat &src, COPY_TYPE cpyType = COPY_TYPE_CPU_CPU);
+        ERROR_CODE setFrom(const Mat &src, COPY_TYPE cpyType = COPY_TYPE_CPU_CPU,cudaStream_t stream = 0);
 
         /**
         \brief Reads an image from a file (only if \ref MEM_CPU is available on the current \ref Mat).
@@ -726,7 +726,7 @@ namespace sl {
         /**
         \brief Convert the Rotation as Euler angles
         \param radian : Define if the angle in is radian or degree
-        \return The Euler angles, as a \ref float3 (x=roll, y=pitch, z=yaw)
+        \return The Euler angles, as a \ref float3 representing the rotations arround the X, Y and Z axes.
          */
         float3 getEulerAngles(bool radian = true) const;
 
@@ -1041,7 +1041,7 @@ namespace sl {
         /**
         \brief Convert the Rotation of the Transform as Euler angles
         \param radian : Define if the angle in is radian or degree
-        \return The Euler angles, as a \ref float3 (x=roll, y=pitch, z=yaw)
+        \return The Euler angles, as a \ref float3 representing the rotations arround the X, Y and Z axes.
          */
         float3 getEulerAngles(bool radian = true) const;
 
@@ -1058,9 +1058,12 @@ namespace sl {
     \ingroup Depth_group
     \brief Intrinsic parameters of a camera.
 
-    \note Similar to the CalibrationParameters, those parameters are taken from the settings file (SNXXX.conf) and are modified during the sl::Camera::open call (with or without Self-Calibration).
-    Those parameters given after sl::Camera::open call, represent the "new camera matrix" that fits/defines each image taken after rectification ( through retrieveImage).
-    \note fx,fy,cx,cy must be the same for Left and Right Camera once sl::Camera::open has been called. Since distortion is corrected during rectification, distortion should not be considered after sl::Camera::open call.
+    Those information about the camera will be returned by \ref Camera::getCameraInformation().
+    
+    \note Similar to the CalibrationParameters, those parameters are taken from the settings file (SNXXX.conf) and are modified during the sl::Camera::open call when running a self-calibration).
+    Those parameters given after sl::Camera::open call, represent the camera matrix corresponding to rectified or unrectified images.
+    \note When filled with rectified parameters, fx,fy,cx,cy must be the same for Left and Right Camera once sl::Camera::open has been called. Since distortion is corrected during rectification, distortion should not be considered on rectified images.
+
      */
     struct CameraParameters {
         float fx; /**< Focal length in pixels along x axis. */
@@ -1068,9 +1071,9 @@ namespace sl {
         float cx; /**< Optical center along x axis, defined in pixels (usually close to width/2). */
         float cy; /**< Optical center along y axis, defined in pixels (usually close to height/2). */
         double disto[5]; /**< Distortion factor : [ k1, k2, p1, p2, k3 ]. Radial (k1,k2,k3) and Tangential (p1,p2) distortion.*/
-        float v_fov; /**< Vertical field of view after stereo rectification, in degrees. */
-        float h_fov; /**< Horizontal field of view after stereo rectification, in degrees.*/
-        float d_fov; /**< Diagonal field of view after stereo rectification, in degrees.*/
+        float v_fov; /**< Vertical field of view, in degrees. */
+        float h_fov; /**< Horizontal field of view, in degrees.*/
+        float d_fov; /**< Diagonal field of view, in degrees.*/
         Resolution image_size; /** size in pixels of the images given by the camera.*/
 
         /**
@@ -1091,13 +1094,16 @@ namespace sl {
     /**
     \struct CalibrationParameters
     \ingroup Depth_group
-    \brief Intrinsic parameters of each cameras and extrinsic (translation and rotation).
+    \brief Intrinsic and Extrinsic parameters of the camera (translation and rotation).
+
+    Those information about the camera will be returned by \ref Camera::getCameraInformation().
+
     \note The calibration/rectification process, called during sl::Camera::open, is using the raw parameters defined in the SNXXX.conf file, where XXX is the ZED Serial Number.
     \n Those values may be adjusted or not by the Self-Calibration to get a proper image alignment. After sl::Camera::open is done (with or without Self-Calibration activated) success, most of the stereo parameters (except Baseline of course) should be 0 or very close to 0.
     \n It means that images after rectification process (given by retrieveImage()) are aligned as if they were taken by a "perfect" stereo camera, defined by the new CalibrationParameters.
      */
     struct CalibrationParameters {
-        float3 R; /**< Rotation (using Rodrigues' transformation) between the two sensors. Defined as 'tilt', 'convergence' and 'roll'.*/
+        float3 R; /**< Rotation on its own (using Rodrigues' transformation) of the right sensor. The left is considered as the reference. Defined as 'tilt', 'convergence' and 'roll'. Using a \ref Rotation, you can use \ref Rotation::setRotationVector(R) to convert into other representations.*/
         float3 T; /**< Translation between the two sensors. T.x is the distance between the two cameras (baseline) in the sl::UNIT chosen during sl::Camera::open (mm, cm, meters, inches...).*/
         CameraParameters left_cam; /**< Intrinsic parameters of the left camera  */
         CameraParameters right_cam; /**< Intrinsic parameters of the right camera  */
@@ -1106,15 +1112,19 @@ namespace sl {
     /**
     \struct CameraInformation
     \ingroup Video_group
-    \brief Camera specific parameters
+    \brief Structure containing information of a signle camera (serial number, model, calibration, etc.)
+
+    Those information about the camera will be returned by \ref Camera::getCameraInformation().
+
+    \note This object is meant to be used as a read-only container, editing any of its field won't impact the SDK.
      */
     struct CameraInformation {
-        CalibrationParameters calibration_parameters; /**< Intrinsic and Extrinsic stereo parameters for rectified images (default).  */
-        CalibrationParameters calibration_parameters_raw; /**< Intrinsic and Extrinsic stereo parameters for original images (unrectified).  */
-        sl::Transform camera_imu_transform; /**< Left Camera to IMU transform matrix, that contains rotation and translation between camera frame and IMU frame. Note that this transform is already applied in the fused quaternion provided in getIMUData(). Therefore, this transform will only be filled in LIVE mode with ZED-M */
-        unsigned int serial_number = 0; /**< camera dependent serial number.  */
-        unsigned int firmware_version = 0; /**< current firmware version of the camera. */
-        sl::MODEL camera_model = sl::MODEL_LAST; /**< camera model (ZED or ZED-M) */
+        CalibrationParameters calibration_parameters; /**< Intrinsic and Extrinsic stereo parameters for rectified/undistorded images (default).  */
+        CalibrationParameters calibration_parameters_raw; /**< Intrinsic and Extrinsic stereo parameters for original images (unrectified/distorded). */
+        sl::Transform camera_imu_transform; /**< IMU to Left camera transform matrix, that contains rotation and translation between IMU frame and camera frame. Note that this transform was applied to the fused quaternion provided in getIMUData() in v2.4 but not anymore starting from v2.5. See getIMUData() for more info.*/
+        unsigned int serial_number = 0; /**< The serial number of the camera.  */
+        unsigned int firmware_version = 0; /**< The internal firmware version of the camera. */
+        sl::MODEL camera_model = sl::MODEL_LAST; /**< The model of the camera (ZED or ZED-M). */
     };
     ///@}
 
@@ -1186,7 +1196,7 @@ namespace sl {
         /**
         \brief Convert the Rotation of the Transform as Euler angles
         \param radian : Define if the angle in is radian or degree. default : true.
-        \return The Euler angles, as a \ref float3 (x=roll, y=pitch, z=yaw)
+        \return The Euler angles, as a \ref float3 representing the rotations arround the X, Y and Z axes.
          */
         float3 getEulerAngles(bool radian = true);
 
@@ -1205,6 +1215,13 @@ namespace sl {
         \n A confidence metric of the tracking [0-100], 0 means that the tracking is lost, 100 means that the tracking can be fully trusted.
          */
         int pose_confidence;
+
+		/**
+		\brief 6x6 Pose covariance of translation (the first 3 values) and rotation in so3 (the last 3 values)
+        
+        \note Computed only if sl::TrackingParameters::enable_spatial_memory is disabled.
+		*/
+		float pose_covariance[36];
 
         /**
         boolean that indicates if tracking is activated or not. You should check that first if something wrong.
@@ -1274,11 +1291,13 @@ namespace sl {
         (3x3) 3x3 Covariance matrix for the linear acceleration
          */
         sl::Matrix3f linear_acceleration_convariance;
-
+ 
 		/**
-		Reserved to future use.
+		Indicates if the IMUData has been taken during a frame capture on sensor.
+		If value is 1, IMUData has been taken during the same time than a frame has been acquired by the left sensor (the time precision is linked to the IMU rate, therefore 800Hz == 1.3ms)
+		If value is 0, the data has not been taken during a frame acquisition.
 		*/
-		int imu_image_sync_val;
+		int image_sync_trigger;
 
     };
 

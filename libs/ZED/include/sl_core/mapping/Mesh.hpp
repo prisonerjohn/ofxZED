@@ -290,6 +290,7 @@ namespace sl {
 
         /**
         UVs defines the 2D projection of each vertices onto the Texture.
+        \n Values are normalized [0;1], starting from the bottom left corner of the texture (as requested by opengl).
         \n In order to display a textured mesh you need to bind the Texture and then draw each triangles by picking its uv values.
 
         \note Contains data only if your mesh have textures (by loading it or calling applytexture).
@@ -364,6 +365,7 @@ namespace sl {
 
         /**
         UVs defines the 2D projection of each vertices onto the Texture.
+        \n Values are normalized [0;1], starting from the bottom left corner of the texture (as requested by opengl).
         \n In order to display a textured mesh you need to bind the Texture and then draw each triangles by picking its uv values.
 
         \note Contains data only if your mesh have textures (by loading it or calling \ref applyTexture).

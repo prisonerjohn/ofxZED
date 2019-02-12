@@ -200,6 +200,8 @@ namespace sl {
     \enum COORDINATE_SYSTEM
     \ingroup Camera_group
     \brief Lists available coordinates systems for positional tracking and 3D measures.
+
+    \image html CoordinateSystem.png
      */
     enum COORDINATE_SYSTEM {
         COORDINATE_SYSTEM_IMAGE, /**< Standard coordinates system in computer vision. Used in OpenCV : see here : http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html */
@@ -207,6 +209,7 @@ namespace sl {
         COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP, /**< Right-Handed with Y pointing up and Z backward. Used in OpenGL. */
         COORDINATE_SYSTEM_RIGHT_HANDED_Z_UP, /**< Right-Handed with Z pointing up and Y forward. Used in 3DSMax. */
         COORDINATE_SYSTEM_LEFT_HANDED_Z_UP, /**< Left-Handed with Z axis pointing up and X forward. Used in Unreal Engine. */
+        COORDINATE_SYSTEM_RIGHT_HANDED_Z_UP_X_FWD, /**< Right-Handed with Z pointing up and X forward. Used in ROS (REP 103). */
         COORDINATE_SYSTEM_LAST
     };
 
@@ -241,6 +244,7 @@ namespace sl {
         ERROR_CODE_INVALID_CALIBRATION_FILE, /**< ZED calibration file is not valid, try to download the factory one or recalibrate your camera using 'ZED Calibration'.*/
         ERROR_CODE_INVALID_SVO_FILE, /**< The provided SVO file is not valid.*/
         ERROR_CODE_SVO_RECORDING_ERROR, /**< An recorder related error occurred (not enough free storage, invalid file).*/
+        ERROR_CODE_SVO_UNSUPPORTED_COMPRESSION, /**< An SVO related error when NVIDIA based compression cannot be loaded.*/
         ERROR_CODE_INVALID_COORDINATE_SYSTEM, /**< The requested coordinate system is not available.*/
         ERROR_CODE_INVALID_FIRMWARE, /**< The firmware of the ZED is out of date. Update to the latest version.*/
         ERROR_CODE_INVALID_FUNCTION_PARAMETERS, /**< An invalid parameter has been set for the function. */
@@ -535,7 +539,7 @@ namespace sl {
 
         /**
         \brief Matrix3f copy constructor (deep copy).
-        \param rotation : the Matrix3f to copy.
+        \param mat : the Matrix3f to copy.
          */
         Matrix3f(const Matrix3f &mat);
 
@@ -686,7 +690,7 @@ namespace sl {
 
         /**
         \brief Matrix4f copy constructor (deep copy).
-        \param rotation : the Matrix4f to copy.
+        \param mat : the Matrix4f to copy.
          */
         Matrix4f(const Matrix4f &mat);
 
@@ -751,7 +755,7 @@ namespace sl {
 
         /**
         \brief Creates the inverse of a Matrix4f.
-        \param rotation : the Matrix4f to compute the inverse from.
+        \param mat : the Matrix4f to compute the inverse from.
         \return The inverse of the given Matrix4f.
          */
         static Matrix4f inverse(const Matrix4f &mat);
@@ -763,7 +767,7 @@ namespace sl {
 
         /**
         \brief Creates the transpose of a Matrix4f.
-        \param rotation : the Matrix4f to compute the transpose from.
+        \param mat : the Matrix4f to compute the transpose from.
         \return The transpose of the given Matrix4f.
          */
         static Matrix4f transpose(const Matrix4f &mat);
@@ -793,7 +797,7 @@ namespace sl {
         /**
         \brief Sets a 3x3 Matrix inside the Matrix4f.
         \note Can be used to set the rotation matrix when the matrix4f is a pose or an isometric matrix.
-        \param \ref Matrix3f  : sub matrix to put inside the Matrix4f.
+        \param input  : sub matrix to put inside the Matrix4f.
         \param row : index of the row to start the 3x3 block. Must be 0 or 1.
         \param column : index of the column to start the 3x3 block. Must be 0 or 1.
         \return SUCCESS if everything went well, ERROR_CODE_FAILURE otherwise.
@@ -803,7 +807,7 @@ namespace sl {
         /**
         \brief Sets a 3x1 Vector inside the Matrix4f at the specified column index.
         \note Can be used to set the Translation/Position matrix when the matrix4f is a pose or an isometry.
-        \param \ref Vector3  : sub vector to put inside the Matrix4f.
+        \param input  : sub vector to put inside the Matrix4f.
         \param column : index of the column to start the 3x3 block. By default, it is the last column (translation for a Pose).
         \return SUCCESS if everything went well, ERROR_CODE_FAILURE otherwise.
          */
@@ -812,7 +816,7 @@ namespace sl {
         /**
         \brief Sets a 4x1 Vector inside the Matrix4f at the specified column index.
         \note Can be used to set the Translation/Position matrix when the matrix4f is a pose or an isometry.
-        \param \ref Vector4  : sub vector to put inside the Matrix4f.
+        \param input  : sub vector to put inside the Matrix4f.
         \param column : index of the column to start the 3x3 block. By default, it is the last column (translation for a Pose).
         \return SUCCESS if everything went well, ERROR_CODE_FAILURE otherwise.
          */

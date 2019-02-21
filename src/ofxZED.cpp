@@ -10,12 +10,19 @@ namespace ofxZED
 		close();
 	}
 
-	void Camera::init(bool useColorImage, bool useDepthImage, bool useTracking, int cameraID, sl::DEPTH_MODE depthMode, sl::RESOLUTION resolution, sl::SENSING_MODE sensingMode, bool captureStereo, float fps)
+	void Camera::init(bool useColorImage, bool useDepthImage, bool useTracking, bool usePointCloud, int cameraID, sl::DEPTH_MODE depthMode, sl::RESOLUTION resolution, sl::SENSING_MODE sensingMode, bool captureStereo, float fps)
 	{
-		bCaptureStereo = captureStereo;
+		if (usePointCloud && !useDepthImage)
+		{
+			ofLogWarning(__FUNCTION__) << "Depth required for point clouds, enabling automatically.";
+			useDepthImage = true;
+		}
+
 		bUseColorImage = useColorImage;
 		bUseDepthImage = useDepthImage;
 		bUseTracking = useTracking;
+		bUsePointCloud = usePointCloud;
+		bCaptureStereo = captureStereo;
 
 		// Set configuration parameters
 		sl::InitParameters init_params;
@@ -166,35 +173,56 @@ namespace ofxZED
 			if (lock()) {
 				if (bUseColorImage) {
 					{
-						auto ret = zed->retrieveImage(this->colorMats[CAPTURE_LEFT], sl::VIEW_LEFT);
+						auto ret = zed->retrieveImage(colorMats[CAPTURE_LEFT], sl::VIEW_LEFT);
 						if (ret == sl::SUCCESS) {
 							colorTextures[CAPTURE_LEFT].loadData(this->colorMats[CAPTURE_LEFT].getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
 						}
 					}
 					if (bCaptureStereo)
 					{
-						auto ret = zed->retrieveImage(this->colorMats[CAPTURE_RIGHT], sl::VIEW_RIGHT);
+						auto ret = zed->retrieveImage(colorMats[CAPTURE_RIGHT], sl::VIEW_RIGHT);
 						if (ret == sl::SUCCESS) {
-							colorTextures[CAPTURE_RIGHT].loadData(this->colorMats[CAPTURE_RIGHT].getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
+							colorTextures[CAPTURE_RIGHT].loadData(colorMats[CAPTURE_RIGHT].getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
 						}
 					}
 				}
 
 				if (bUseDepthImage) {
 					{
-						auto ret = zed->retrieveMeasure(this->depthMats[CAPTURE_LEFT], sl::MEASURE_DEPTH);
+						auto ret = zed->retrieveMeasure(depthMats[CAPTURE_LEFT], sl::MEASURE_DEPTH);
 						if (ret == sl::SUCCESS) {
-							depthTextures[CAPTURE_LEFT].loadData(this->depthMats[CAPTURE_LEFT].getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
+							depthTextures[CAPTURE_LEFT].loadData(depthMats[CAPTURE_LEFT].getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
 							ofLogError() << sl::toString(ret).c_str() << endl;
 						}
+
+						if (bUsePointCloud)
+						{
+							auto ret = zed->retrieveMeasure(pointsMat, sl::MEASURE_XYZRGBA);
+							if (ret == sl::SUCCESS)
+							{
+								int numPoints = zedWidth * zedHeight;
+								if (pointsVbo.getNumVertices() < numPoints)
+								{
+									pointsVbo.setVertexData(pointsMat.getPtr<float>(), 3, numPoints, GL_DYNAMIC_DRAW, sizeof(float) * 4);
+								}
+								else
+								{
+									pointsVbo.updateVertexData(pointsMat.getPtr<float>(), numPoints);
+								}
+							}
+							else 
+							{
+								ofLogError(__FUNCTION__) << sl::toString(ret).c_str();
+							}
+						}
 					}
 					if (bCaptureStereo)
 					{
-						auto ret = zed->retrieveMeasure(this->depthMats[CAPTURE_LEFT], sl::MEASURE_DEPTH_RIGHT);
+						auto ret = zed->retrieveMeasure(depthMats[CAPTURE_LEFT], sl::MEASURE_DEPTH_RIGHT);
 						if (ret == sl::SUCCESS) {
-							depthTextures[CAPTURE_RIGHT].loadData(this->depthMats[CAPTURE_LEFT].getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
+							depthTextures[CAPTURE_RIGHT].loadData(depthMats[CAPTURE_LEFT].getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
 							ofLogError() << sl::toString(ret).c_str() << endl;

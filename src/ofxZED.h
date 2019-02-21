@@ -96,6 +96,7 @@ namespace ofxZED
 			bool useColorImage = true,
 			bool useDepthImage = true,
 			bool useTracking = true,
+			bool usePointCloud = true,
 			int cameraID = 0,
 			sl::DEPTH_MODE depthMode = sl::DEPTH_MODE::DEPTH_MODE_QUALITY,
 			sl::RESOLUTION resolution = sl::RESOLUTION::RESOLUTION_HD720,
@@ -108,6 +109,8 @@ namespace ofxZED
 
 		ofTexture& getColorTexture(CAPTURE_SIDE side = CAPTURE_LEFT) { return colorTextures[side]; }
 		ofTexture& getDepthTexture(CAPTURE_SIDE side = CAPTURE_LEFT) { return depthTextures[side]; }
+
+		ofVbo& getPointsVbo() { return pointsVbo; }
 
 		int zedWidth;
 		int zedHeight;
@@ -123,18 +126,21 @@ namespace ofxZED
 
 		sl::Mat colorMats[2];
 		sl::Mat depthMats[2];
-		sl::Mat pointMats[2];
+		sl::Mat pointsMat;
 
-		bool bCaptureStereo = true;
 		bool bUseColorImage = false;
 		bool bUseDepthImage = false;
 		bool bUseTracking = false;
+		bool bUsePointCloud = false;
+		bool bCaptureStereo = false;
 		bool bNewFrame = false;
 		uint64_t lastNewFrame = 0;
 
 		sl::Camera* zed = nullptr;
 		ofTexture colorTextures[2];
 		ofTexture depthTextures[2];
+		
+		ofVbo pointsVbo;
 
 		bool bRequestNewFrame = true;
 		bool bNewBuffer = false;

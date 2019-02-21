@@ -34,7 +34,7 @@ void main()
 //--------------------------------------------------------------
 void ofApp::setup()
 {
-	zed.init(true, true, true, 0);
+	zed.init();
 
 	depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
 	depthShader.linkProgram();
@@ -69,6 +69,8 @@ void ofApp::draw()
 	ofMultMatrix(zed.getTrackedPose());
 	ofDrawAxis(0.3);
 	ofDrawBox(0.1);
+	ofSetColor(ofColor::white);
+	zed.getPointsVbo().draw(GL_POINTS, 0, zed.zedWidth * zed.zedHeight);
 	ofPopMatrix();
 
 	ofDrawAxis(100);

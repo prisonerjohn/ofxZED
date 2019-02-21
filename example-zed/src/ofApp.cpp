@@ -34,7 +34,7 @@ void main()
 //--------------------------------------------------------------
 void ofApp::setup()
 {
-	zed.init(true, true, true, 0);
+	zed.init();
 
 	depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
 	depthShader.linkProgram();
@@ -54,13 +54,13 @@ void ofApp::update()
 void ofApp::draw()
 {
 	colorShader.begin();
-	zed.getColorLeftTexture().draw(0, 0);
-	zed.getColorRightTexture().draw(zed.zedWidth, 0);
+	zed.getColorTexture(ofxZED::CAPTURE_LEFT).draw(0, 0);
+	zed.getColorTexture(ofxZED::CAPTURE_RIGHT).draw(zed.zedWidth, 0);
 	colorShader.end();
 
 	depthShader.begin();
-	zed.getDepthLeftTexture().draw(0, zed.zedHeight);
-	zed.getDepthRightTexture().draw(zed.zedWidth, zed.zedHeight);
+	zed.getDepthTexture(ofxZED::CAPTURE_LEFT).draw(0, zed.zedHeight);
+	zed.getDepthTexture(ofxZED::CAPTURE_RIGHT).draw(zed.zedWidth, zed.zedHeight);
 	depthShader.end();
 
 	cam.begin();
@@ -69,6 +69,8 @@ void ofApp::draw()
 	ofMultMatrix(zed.getTrackedPose());
 	ofDrawAxis(0.3);
 	ofDrawBox(0.1);
+	ofSetColor(ofColor::white);
+	zed.getPointsVbo().draw(GL_POINTS, 0, zed.zedWidth * zed.zedHeight);
 	ofPopMatrix();
 
 	ofDrawAxis(100);

@@ -166,25 +166,25 @@ namespace ofxZED
 			if (lock()) {
 				if (bUseColorImage) {
 					{
-						auto ret = zed->retrieveImage(this->cl, sl::VIEW_LEFT);
+						auto ret = zed->retrieveImage(this->colorMats[CAPTURE_LEFT], sl::VIEW_LEFT);
 						if (ret == sl::SUCCESS) {
-							colorTextures[CAPTURE_LEFT].loadData(this->cl.getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
+							colorTextures[CAPTURE_LEFT].loadData(this->colorMats[CAPTURE_LEFT].getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
 						}
 					}
 					if (bCaptureStereo)
 					{
-						auto ret = zed->retrieveImage(this->cr, sl::VIEW_RIGHT);
+						auto ret = zed->retrieveImage(this->colorMats[CAPTURE_RIGHT], sl::VIEW_RIGHT);
 						if (ret == sl::SUCCESS) {
-							colorTextures[CAPTURE_RIGHT].loadData(this->cr.getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
+							colorTextures[CAPTURE_RIGHT].loadData(this->colorMats[CAPTURE_RIGHT].getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
 						}
 					}
 				}
 
 				if (bUseDepthImage) {
 					{
-						auto ret = zed->retrieveMeasure(this->dl, sl::MEASURE_DEPTH);
+						auto ret = zed->retrieveMeasure(this->depthMats[CAPTURE_LEFT], sl::MEASURE_DEPTH);
 						if (ret == sl::SUCCESS) {
-							depthTextures[CAPTURE_LEFT].loadData(this->dl.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
+							depthTextures[CAPTURE_LEFT].loadData(this->depthMats[CAPTURE_LEFT].getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
 							ofLogError() << sl::toString(ret).c_str() << endl;
@@ -192,9 +192,9 @@ namespace ofxZED
 					}
 					if (bCaptureStereo)
 					{
-						auto ret = zed->retrieveMeasure(this->dr, sl::MEASURE_DEPTH_RIGHT);
+						auto ret = zed->retrieveMeasure(this->depthMats[CAPTURE_LEFT], sl::MEASURE_DEPTH_RIGHT);
 						if (ret == sl::SUCCESS) {
-							depthTextures[CAPTURE_RIGHT].loadData(this->dr.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
+							depthTextures[CAPTURE_RIGHT].loadData(this->depthMats[CAPTURE_LEFT].getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
 							ofLogError() << sl::toString(ret).c_str() << endl;

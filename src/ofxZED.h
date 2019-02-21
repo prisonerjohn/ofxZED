@@ -121,7 +121,9 @@ namespace ofxZED
 	protected:
 		void threadedFunction() override;
 
-		sl::Mat cl, cr, dl, dr;
+		sl::Mat colorMats[2];
+		sl::Mat depthMats[2];
+		sl::Mat pointMats[2];
 
 		bool bCaptureStereo = true;
 		bool bUseColorImage = false;

@@ -97,8 +97,9 @@ namespace ofxZED
 			bool useDepthImage = true,
 			bool useTracking = true,
 			int cameraID = 0,
-			sl::DEPTH_MODE mode = sl::DEPTH_MODE::DEPTH_MODE_QUALITY,
+			sl::DEPTH_MODE depthMode = sl::DEPTH_MODE::DEPTH_MODE_QUALITY,
 			sl::RESOLUTION resolution = sl::RESOLUTION::RESOLUTION_HD720,
+			sl::SENSING_MODE sensingMode = sl::SENSING_MODE::SENSING_MODE_FILL,
 			bool captureStereo = true,
 			float fps = 0.0);
 		void close();

@@ -10,7 +10,7 @@ namespace ofxZED
 		close();
 	}
 
-	void Camera::init(bool useColorImage, bool useDepthImage, bool useTracking, int cameraID, sl::DEPTH_MODE mode, sl::RESOLUTION resolution, bool captureStereo, float fps)
+	void Camera::init(bool useColorImage, bool useDepthImage, bool useTracking, int cameraID, sl::DEPTH_MODE depthMode, sl::RESOLUTION resolution, sl::SENSING_MODE sensingMode, bool captureStereo, float fps)
 	{
 		bCaptureStereo = captureStereo;
 		bUseColorImage = useColorImage;
@@ -21,7 +21,7 @@ namespace ofxZED
 		sl::InitParameters init_params;
 		init_params.camera_resolution = resolution;
 		init_params.camera_fps = fps;
-		init_params.depth_mode = mode;
+		init_params.depth_mode = depthMode;
 		init_params.enable_right_side_measure = bCaptureStereo;
 		init_params.input.setFromCameraID(cameraID);
 		init_params.coordinate_units = sl::UNIT_METER;
@@ -78,7 +78,7 @@ namespace ofxZED
 		if (bUseDepthImage)
 		{
 			rt.enable_depth = true;
-			rt.sensing_mode = sl::SENSING_MODE::SENSING_MODE_FILL;
+			rt.sensing_mode = sensingMode;
 		}
 		else if (bUseColorImage)
 		{

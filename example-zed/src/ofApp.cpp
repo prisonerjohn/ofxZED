@@ -1,46 +1,19 @@
 #include "ofApp.h"
 
-#define STRINGIFY(x) #x
-
-static string depthFragmentShader =
-STRINGIFY(
-	uniform sampler2DRect tex;
-void main()
-{
-	vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
-	float value = col.r;
-	float low1 = 0.5;
-	float high1 = 5.0;
-	float low2 = 1.0;
-	float high2 = 0.0;
-	float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
-	if (d == 1.0) {
-		d = 0.0;
-	}
-	gl_FragColor = vec4(vec3(d), 1.0);
-}
-);
-
-static string colorFragmentShader =
-STRINGIFY(
-	uniform sampler2DRect tex;
-void main()
-{
-	vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
-	gl_FragColor = vec4(col.b, col.g, col.r, col.a);
-}
-);
-
 //--------------------------------------------------------------
 void ofApp::setup()
 {
 	zed.init();
 
-	depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
-	depthShader.linkProgram();
+	ofShaderSettings depthSettings;
+	depthSettings.bindDefaults = true;
+	depthSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/depthMap.frag";
+	depthShader.setup(depthSettings);
 
-	colorShader.setupShaderFromSource(GL_FRAGMENT_SHADER, colorFragmentShader);
-	colorShader.linkProgram();
+	ofShaderSettings colorSettings;
+	colorSettings.bindDefaults = true;
+	colorSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/colorImage.frag";
+	colorShader.setup(colorSettings);
 }
 
 //--------------------------------------------------------------

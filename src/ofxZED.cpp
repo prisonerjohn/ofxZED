@@ -10,21 +10,22 @@ namespace ofxZED
 		close();
 	}
 
-	void Camera::init(bool useColorImage, bool useDepthImage, bool useTracking, int cameraID, sl::DEPTH_MODE mode, sl::RESOLUTION resolution, float fps)
+	void Camera::init(bool useColorImage, bool useDepthImage, bool useTracking, int cameraID, sl::DEPTH_MODE mode, sl::RESOLUTION resolution, bool captureStereo, float fps)
 	{
+		bCaptureStereo = captureStereo;
+		bUseColorImage = useColorImage;
+		bUseDepthImage = useDepthImage;
+		bUseTracking = useTracking;
+
 		// Set configuration parameters
 		sl::InitParameters init_params;
 		init_params.camera_resolution = resolution;
 		init_params.camera_fps = fps;
 		init_params.depth_mode = mode;
-		init_params.enable_right_side_measure = true;
+		init_params.enable_right_side_measure = bCaptureStereo;
 		init_params.input.setFromCameraID(cameraID);
 		init_params.coordinate_units = sl::UNIT_METER;
 		init_params.coordinate_system = sl::COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
-	
-		bUseColorImage = useColorImage;
-		bUseDepthImage = useDepthImage;
-		bUseTracking = useTracking;
 
 		ofLog() << "Initializing ZED camera." << std::endl;
 
@@ -64,10 +65,14 @@ namespace ofxZED
 		ofLog() << "Resolution: " << zedWidth << ", " << zedHeight << endl;
 		ofLog() << "FPS: " << getCurrentFPS() << endl;
 
-		colorLeftTexture.allocate(zedWidth, zedHeight, GL_RGBA);
-		colorRightTexture.allocate(zedWidth, zedHeight, GL_RGBA);
-		depthLeftTexture.allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
-		depthRightTexture.allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
+
+		colorTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_RGBA);
+		depthTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
+		if (bCaptureStereo)
+		{
+			colorTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_RGBA);
+			depthTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
+		}
 
 		bRequestNewFrame = true;
 		if (bUseDepthImage)
@@ -163,13 +168,14 @@ namespace ofxZED
 					{
 						auto ret = zed->retrieveImage(this->cl, sl::VIEW_LEFT);
 						if (ret == sl::SUCCESS) {
-							colorLeftTexture.loadData(this->cl.getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
+							colorTextures[CAPTURE_LEFT].loadData(this->cl.getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
 						}
 					}
+					if (bCaptureStereo)
 					{
 						auto ret = zed->retrieveImage(this->cr, sl::VIEW_RIGHT);
 						if (ret == sl::SUCCESS) {
-							colorRightTexture.loadData(this->cr.getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
+							colorTextures[CAPTURE_RIGHT].loadData(this->cr.getPtr<uint8_t>(), zedWidth, zedHeight, GL_RGBA);
 						}
 					}
 				}
@@ -178,16 +184,17 @@ namespace ofxZED
 					{
 						auto ret = zed->retrieveMeasure(this->dl, sl::MEASURE_DEPTH);
 						if (ret == sl::SUCCESS) {
-							depthLeftTexture.loadData(this->dl.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
+							depthTextures[CAPTURE_LEFT].loadData(this->dl.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
 							ofLogError() << sl::toString(ret).c_str() << endl;
 						}
 					}
+					if (bCaptureStereo)
 					{
 						auto ret = zed->retrieveMeasure(this->dr, sl::MEASURE_DEPTH_RIGHT);
 						if (ret == sl::SUCCESS) {
-							depthRightTexture.loadData(this->dr.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
+							depthTextures[CAPTURE_RIGHT].loadData(this->dr.getPtr<float>(), zedWidth, zedHeight, GL_LUMINANCE);
 						}
 						else {
 							ofLogError() << sl::toString(ret).c_str() << endl;

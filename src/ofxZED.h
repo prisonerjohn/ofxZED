@@ -77,6 +77,11 @@ namespace ofxZED
 		return sl::Orientation(sl::float4(v.x(), v.y(), v.z(), v.w()));
 	}
 
+	enum CAPTURE_SIDE
+	{
+		CAPTURE_LEFT,
+		CAPTURE_RIGHT
+	};
 
 	class MR;
 
@@ -88,21 +93,20 @@ namespace ofxZED
 		Camera();
 		~Camera();
 		void init(
-			bool useColorImage = true, 
-			bool useDepthImage = true, 
+			bool useColorImage = true,
+			bool useDepthImage = true,
 			bool useTracking = true,
 			int cameraID = 0,
-			sl::DEPTH_MODE mode = sl::DEPTH_MODE::DEPTH_MODE_PERFORMANCE,
-			sl::RESOLUTION resolution = sl::RESOLUTION::RESOLUTION_HD720, 
+			sl::DEPTH_MODE mode = sl::DEPTH_MODE::DEPTH_MODE_QUALITY,
+			sl::RESOLUTION resolution = sl::RESOLUTION::RESOLUTION_HD720,
+			bool captureStereo = true,
 			float fps = 0.0);
 		void close();
 		void update();
 		ofVec2f getImageDimensions();
 
-		ofTexture& getColorLeftTexture() { return colorLeftTexture; }
-		ofTexture& getColorRightTexture() { return colorRightTexture; }
-		ofTexture& getDepthLeftTexture() { return depthLeftTexture; }
-		ofTexture& getDepthRightTexture() { return depthRightTexture; }
+		ofTexture& getColorTexture(CAPTURE_SIDE side = CAPTURE_LEFT) { return colorTextures[side]; }
+		ofTexture& getDepthTexture(CAPTURE_SIDE side = CAPTURE_LEFT) { return depthTextures[side]; }
 
 		int zedWidth;
 		int zedHeight;
@@ -118,6 +122,7 @@ namespace ofxZED
 
 		sl::Mat cl, cr, dl, dr;
 
+		bool bCaptureStereo = true;
 		bool bUseColorImage = false;
 		bool bUseDepthImage = false;
 		bool bUseTracking = false;
@@ -125,10 +130,8 @@ namespace ofxZED
 		uint64_t lastNewFrame = 0;
 
 		sl::Camera* zed = nullptr;
-		ofTexture colorLeftTexture;
-		ofTexture colorRightTexture;
-		ofTexture depthLeftTexture;
-		ofTexture depthRightTexture;
+		ofTexture colorTextures[2];
+		ofTexture depthTextures[2];
 
 		bool bRequestNewFrame = true;
 		bool bNewBuffer = false;

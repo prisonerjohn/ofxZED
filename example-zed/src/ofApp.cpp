@@ -54,13 +54,13 @@ void ofApp::update()
 void ofApp::draw()
 {
 	colorShader.begin();
-	zed.getColorLeftTexture().draw(0, 0);
-	zed.getColorRightTexture().draw(zed.zedWidth, 0);
+	zed.getColorTexture(ofxZED::CAPTURE_LEFT).draw(0, 0);
+	zed.getColorTexture(ofxZED::CAPTURE_RIGHT).draw(zed.zedWidth, 0);
 	colorShader.end();
 
 	depthShader.begin();
-	zed.getDepthLeftTexture().draw(0, zed.zedHeight);
-	zed.getDepthRightTexture().draw(zed.zedWidth, zed.zedHeight);
+	zed.getDepthTexture(ofxZED::CAPTURE_LEFT).draw(0, zed.zedHeight);
+	zed.getDepthTexture(ofxZED::CAPTURE_RIGHT).draw(zed.zedWidth, zed.zedHeight);
 	depthShader.end();
 
 	cam.begin();

@@ -76,9 +76,9 @@
 
  // SDK VERSION NUMBER
 #define ZED_SDK_MAJOR_VERSION 2
-#define ZED_SDK_MINOR_VERSION 4
+#define ZED_SDK_MINOR_VERSION 7
 #define ZED_SDK_PATCH_VERSION 1
-
+#define ZED_SDK_BUILD_ID "13394"
 
 #define ZED_SDK_VERSION_ATTRIBUTE private: uint32_t _zed_sdk_major_version = ZED_SDK_MAJOR_VERSION, _zed_sdk_minor_version = ZED_SDK_MINOR_VERSION, _zed_sdk_patch_version = ZED_SDK_PATCH_VERSION;
 
@@ -184,8 +184,9 @@ namespace sl {
     \enum RESOLUTION
     \ingroup Video_group
     \ingroup Enumerations
-    \brief Represents the available resolution defined in sl::cameraResolution.
-    \note Since v1.0, RESOLUTION_VGA mode has been updated to WVGA (from 640*480 to 672*376) and requires a firmware update to function (>= 1142). Firmware can be updated in the ZED Explorer.
+    \brief Represents the available resolution defined in the \ref cameraResolution list.
+    \note The VGA resolution does respect the 640*480 standard to better fit the camera sensor (672*376 is used).
+
     \warning NVIDIA Jetson X1 only supports RESOLUTION_HD1080@15, RESOLUTION_HD720@30/15, and RESOLUTION_VGA@60/30/15.
      */
     enum RESOLUTION {
@@ -222,7 +223,7 @@ namespace sl {
         CAMERA_SETTINGS_HUE, /**< Defines the hue control. Affected value should be between 0 and 11.*/
         CAMERA_SETTINGS_SATURATION, /**< Defines the saturation control. Affected value should be between 0 and 8.*/
         CAMERA_SETTINGS_GAIN, /**< Defines the gain control. Affected value should be between 0 and 100 for manual control.*/
-        CAMERA_SETTINGS_EXPOSURE, /**< Defines the exposure control. Affected value should be between 0 and 100 for manual control.*/
+        CAMERA_SETTINGS_EXPOSURE, /**< Defines the exposure control. Affected value should be between 0 and 100 for manual control.\n The exposition is mapped linearly in a percentage of the following max values. Special case for the setExposure(0) that corresponds to 0.17072ms.\n The conversion to milliseconds depends on the framerate: <ul><li>15fps setExposure(100) -> 19.97ms</li><li>30fps setExposure(100) -> 19.97ms</li><li>60fps setExposure(100) -> 10.84072ms</li><li>100fps setExposure(100) -> 10.106624ms</li></ul>*/
         CAMERA_SETTINGS_WHITEBALANCE, /**< Defines the color temperature control. Affected value should be between 2800 and 6500 with a step of 100.*/
         CAMERA_SETTINGS_AUTO_WHITEBALANCE, /**< Defines the status of white balance (automatic or manual). A value of 0 disable the AWB, while 1 activate it.*/
         CAMERA_SETTINGS_LAST
@@ -244,8 +245,8 @@ namespace sl {
     /**
     \enum SELF_CALIBRATION_STATE
     \ingroup Video_group
-    \brief Status for self calibration. Since v0.9.3, self-calibration is done in background and start in the sl::Camera::open or Reset function.
-    \brief You can follow the current status for the self-calibration any time once ZED object has been constructed.
+    \brief Status for asynchrnous self-calibration.
+    \see Camera::open()
      */
     enum SELF_CALIBRATION_STATE {
         SELF_CALIBRATION_STATE_NOT_STARTED, /**< Self calibration has not run yet (no sl::Camera::open or sl::Camera::resetSelfCalibration called).*/
@@ -278,7 +279,7 @@ namespace sl {
         DEPTH_MODE_PERFORMANCE, /**< Computation mode optimized for speed.*/
         DEPTH_MODE_MEDIUM, /**< Balanced quality mode. Depth map is robust in any environment and requires medium resources for computation.*/
         DEPTH_MODE_QUALITY, /**< Computation mode designed for high quality results.*/
-        DEPTH_MODE_ULTRA, /**< Computation mode favorising edges and sharpness. Requires lot of GPU memory and high computation power in /ref SENSING_MODE_FILL.*/
+        DEPTH_MODE_ULTRA, /**< Computation mode favorising edges and sharpness. Requires more GPU memory and computation power.*/
         DEPTH_MODE_LAST
     };
 
@@ -302,7 +303,7 @@ namespace sl {
      */
     enum SENSING_MODE {
         SENSING_MODE_STANDARD, /**< This mode outputs ZED standard depth map that preserves edges and depth accuracy.
-                               * Applications example: Obstacle detection, Automated navigation, People detection, 3D reconstruction.*/
+                               * Applications example: Obstacle detection, Automated navigation, People detection, 3D reconstruction, measurements.*/
         SENSING_MODE_FILL, /**< This mode outputs a smooth and fully dense depth map.
                            * Applications example: AR/VR, Mixed-reality capture, Image post-processing.*/
         SENSING_MODE_LAST
@@ -327,23 +328,23 @@ namespace sl {
     \brief Lists retrievable measures.
      */
     enum MEASURE {
-        MEASURE_DISPARITY, /**< Disparity map, sl::MAT_TYPE_32F_C1.*/
-        MEASURE_DEPTH, /**< Depth map, sl::MAT_TYPE_32F_C1.*/
-        MEASURE_CONFIDENCE, /**< Certainty/confidence of the depth map, sl::MAT_TYPE_32F_C1.*/
-        MEASURE_XYZ, /**< Point cloud, sl::MAT_TYPE_32F_C4, channel 4 is empty.*/
-        MEASURE_XYZRGBA, /**< Colored point cloud,  sl::MAT_TYPE_32F_C4, channel 4 contains color in R-G-B-A order.*/
-        MEASURE_XYZBGRA, /**< Colored point cloud,  sl::MAT_TYPE_32F_C4, channel 4 contains color in B-G-R-A order.*/
-        MEASURE_XYZARGB, /**< Colored point cloud,  sl::MAT_TYPE_32F_C4, channel 4 contains color in A-R-G-B order.*/
-        MEASURE_XYZABGR, /**< Colored point cloud,  sl::MAT_TYPE_32F_C4, channel 4 contains color in A-B-G-R order.*/
-        MEASURE_NORMALS, /**< Normals vector,  sl::MAT_TYPE_32F_C4, channel 4 is empty (set to 0)*/
-        MEASURE_DISPARITY_RIGHT, /**< Disparity map for right sensor, sl::MAT_TYPE_32F_C1.*/
-        MEASURE_DEPTH_RIGHT, /**< Depth map for right sensor, sl::MAT_TYPE_32F_C1.*/
-        MEASURE_XYZ_RIGHT, /**< Point cloud for right sensor, sl::MAT_TYPE_32F_C1, channel 4 is empty.*/
-        MEASURE_XYZRGBA_RIGHT, /**< Colored point cloud for right sensor, sl::MAT_TYPE_32F_C4, channel 4 contains color in R-G-B-A order.*/
-        MEASURE_XYZBGRA_RIGHT, /**< Colored point cloud for right sensor, sl::MAT_TYPE_32F_C4, channel 4 contains color in B-G-R-A order.*/
-        MEASURE_XYZARGB_RIGHT, /**< Colored point cloud for right sensor, sl::MAT_TYPE_32F_C4, channel 4 contains color in A-R-G-B order.*/
-        MEASURE_XYZABGR_RIGHT, /**< Colored point cloud for right sensor, sl::MAT_TYPE_32F_C4, channel 4 contains color in A-B-G-R order.*/
-        MEASURE_NORMALS_RIGHT, /**< Normals vector for right view, sl::MAT_TYPE_32F_C4, channel 4 is empty (set to 0)*/
+        MEASURE_DISPARITY, /**< Disparity map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        MEASURE_DEPTH, /**< Depth map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        MEASURE_CONFIDENCE, /**< Certainty/confidence of the depth map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        MEASURE_XYZ, /**< Point cloud. Each pixel contains 4 float (X, Y, Z, not used). sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZRGBA, /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the RGBA color.  sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZBGRA, /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the BGRA color.  sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZARGB, /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ARGB color.  sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZABGR, /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ABGR color.  sl::MAT_TYPE_32F_C4.*/
+        MEASURE_NORMALS, /**< Normals vector. Each pixel contains 4 float (X, Y, Z, 0).  sl::MAT_TYPE_32F_C4.*/
+        MEASURE_DISPARITY_RIGHT, /**< Disparity map for right sensor. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        MEASURE_DEPTH_RIGHT, /**< Depth map for right sensor. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        MEASURE_XYZ_RIGHT, /**< Point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, not used). sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZRGBA_RIGHT, /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the RGBA color. sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZBGRA_RIGHT, /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the BGRA color. sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZARGB_RIGHT, /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ARGB color. sl::MAT_TYPE_32F_C4.*/
+        MEASURE_XYZABGR_RIGHT, /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ABGR color. sl::MAT_TYPE_32F_C4.*/
+        MEASURE_NORMALS_RIGHT, /**< Normals vector for right view. Each pixel contains 4 float (X, Y, Z, 0).  sl::MAT_TYPE_32F_C4.*/
         MEASURE_LAST
     };
 
@@ -366,20 +367,20 @@ namespace sl {
     \brief Lists available views.
      */
     enum VIEW {
-        VIEW_LEFT, /**< Left RGBA image, sl::MAT_TYPE_8U_C4. */
-        VIEW_RIGHT, /**< Right RGBA image, sl::MAT_TYPE_8U_C4. */
-        VIEW_LEFT_GRAY, /**< Left GRAY image, sl::MAT_TYPE_8U_C1. */
-        VIEW_RIGHT_GRAY, /**< Right GRAY image, sl::MAT_TYPE_8U_C1. */
-        VIEW_LEFT_UNRECTIFIED, /**< Left RGBA unrectified image, sl::MAT_TYPE_8U_C4. */
-        VIEW_RIGHT_UNRECTIFIED, /**< Right RGBA unrectified image, sl::MAT_TYPE_8U_C4. */
-        VIEW_LEFT_UNRECTIFIED_GRAY, /**< Left GRAY unrectified image, sl::MAT_TYPE_8U_C1. */
-        VIEW_RIGHT_UNRECTIFIED_GRAY, /**< Right GRAY unrectified image, sl::MAT_TYPE_8U_C1. */
-        VIEW_SIDE_BY_SIDE, /**< Left and right image (the image width is therefore doubled). RGBA image, sl::MAT_TYPE_8U_C4. */
-        VIEW_DEPTH, /**< Color rendering of the depth, sl::MAT_TYPE_8U_C4. */
-        VIEW_CONFIDENCE, /**< Color rendering of the depth confidence, sl::MAT_TYPE_8U_C4. */
-        VIEW_NORMALS, /**< Color rendering of the normals, sl::MAT_TYPE_8U_C4. */
+        VIEW_LEFT, /**< Left RGBA image. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4.  */
+        VIEW_RIGHT, /**< Right RGBA image. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. */
+        VIEW_LEFT_GRAY, /**< Left GRAY image. Each pixel contains 1 usigned char. sl::MAT_TYPE_8U_C1. */
+        VIEW_RIGHT_GRAY, /**< Right GRAY image. Each pixel contains 1 usigned char. sl::MAT_TYPE_8U_C1. */
+        VIEW_LEFT_UNRECTIFIED, /**< Left RGBA unrectified image. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. */
+        VIEW_RIGHT_UNRECTIFIED, /**< Right RGBA unrectified image. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. */
+        VIEW_LEFT_UNRECTIFIED_GRAY, /**< Left GRAY unrectified image. Each pixel contains 1 usigned char. sl::MAT_TYPE_8U_C1. */
+        VIEW_RIGHT_UNRECTIFIED_GRAY, /**< Right GRAY unrectified image. Each pixel contains 1 usigned char. sl::MAT_TYPE_8U_C1. */
+        VIEW_SIDE_BY_SIDE, /**< Left and right image (the image width is therefore doubled). Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. */
+        VIEW_DEPTH, /**< Color rendering of the depth. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. Use \ref MEASURE "MEASURE_DEPTH" with \ref Camera.retrieveMeasure() to get depth values.*/
+        VIEW_CONFIDENCE, /**< Color rendering of the depth confidence. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. */
+        VIEW_NORMALS, /**< Color rendering of the normals. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. */
         VIEW_DEPTH_RIGHT, /**< Color rendering of the right depth mapped on right sensor, sl::MAT_TYPE_8U_C4. */
-        VIEW_NORMALS_RIGHT, /**< Color rendering of the normals mapped on right sensor, sl::MAT_TYPE_8U_C4. */
+        VIEW_NORMALS_RIGHT, /**< Color rendering of the normals mapped on right sensor. Each pixel contains 4 usigned char (R,G,B,A). sl::MAT_TYPE_8U_C4. */
         VIEW_LAST
     };
 
@@ -583,9 +584,11 @@ namespace sl {
     \brief sl::SVO_COMPRESSION_MODE_LOSSLESS is an improvement of previous lossless compression (used in ZED Explorer), even if size may be bigger, compression time is much faster.
      */
     enum SVO_COMPRESSION_MODE {
-        SVO_COMPRESSION_MODE_RAW, /**< \deprecated {This compresion is deprecated this it doesn't support timestamp and IMU data} RAW images, no compression.*/
-        SVO_COMPRESSION_MODE_LOSSLESS, /**< PNG/ZSTD (lossless) based compression : avg size = 42% (of RAW).*/
-        SVO_COMPRESSION_MODE_LOSSY, /**< JPEG (lossy) based compression : avg size = 22% (of RAW).*/
+        SVO_COMPRESSION_MODE_RAW, /**< RAW images, no compression. \deprecated This compresion is deprecated asit doesn't support timestamp and IMU data. Only playback is allowed in the mode. */
+        SVO_COMPRESSION_MODE_LOSSLESS, /**< PNG/ZSTD (lossless) CPU based compression : avg size = 42% (of RAW).*/
+        SVO_COMPRESSION_MODE_LOSSY, /**< JPEG (lossy) CPU based compression : avg size = 22% (of RAW). More compressed but can introduce compression artifacts.*/
+        SVO_COMPRESSION_MODE_AVCHD, /**< H264(AVCHD) GPU based compression : avg size = 1% (of RAW). Requires a NVIDIA GPU*/
+        SVO_COMPRESSION_MODE_HEVC, /**< H265(HEVC) GPU based compression : avg size = 1% (of raw). Requires a NVIDIA GPU*/
         SVO_COMPRESSION_MODE_LAST
     };
 
@@ -615,11 +618,11 @@ namespace sl {
             average_compression_time = 0;
             average_compression_ratio = 0;
         }
-        bool status; /**< status of current frame. May be true for success or false if frame could not be written in the SVO file.*/
-        double current_compression_time; /**< compression time for the current frame in ms.*/
-        double current_compression_ratio; /**< compression ratio (% of raw size) for the current frame.*/
-        double average_compression_time; /**< average compression time in ms since beginning of recording.*/
-        double average_compression_ratio; /**< compression ratio (% of raw size) since beginning of recording.*/
+        bool status; /**< Status of current frame. True for success or false if the frame couldn't be written in the SVO file.*/
+        double current_compression_time; /**< Compression time for the current frame in ms.*/
+        double current_compression_ratio; /**< Compression ratio (% of raw size) for the current frame.*/
+        double average_compression_time; /**< Average compression time in ms since beginning of recording.*/
+        double average_compression_ratio; /**< Average compression ratio (% of raw size) since beginning of recording.*/
     };
 
 

@@ -47,7 +47,6 @@ void ofApp::setup()
 void ofApp::update()
 {
 	zed.update();
-	ofLog() << "FPS: " << zed.getCurrentFPS() << endl;
 }
 
 //--------------------------------------------------------------

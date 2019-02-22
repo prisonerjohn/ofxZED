@@ -74,11 +74,11 @@ namespace ofxZED
 
 
 		colorTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_RGBA);
-		depthTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
+		depthTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_R32F);
 		if (bCaptureStereo)
 		{
 			colorTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_RGBA);
-			depthTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
+			depthTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_R32F);
 		}
 
 		bRequestNewFrame = true;

@@ -7,12 +7,28 @@ void ofApp::setup()
 
 	ofShaderSettings depthSettings;
 	depthSettings.bindDefaults = true;
-	depthSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/depthMap.frag";
+	if (ofIsGLProgrammableRenderer())
+	{
+		depthSettings.shaderFiles[GL_VERTEX_SHADER] = "shaders/gl3/depthMap.vert";
+		depthSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl3/depthMap.frag";
+	}
+	else
+	{
+		depthSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/depthMap.frag";
+	}
 	depthShader.setup(depthSettings);
 
 	ofShaderSettings colorSettings;
 	colorSettings.bindDefaults = true;
-	colorSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/colorImage.frag";
+	if (ofIsGLProgrammableRenderer())
+	{
+		colorSettings.shaderFiles[GL_VERTEX_SHADER] = "shaders/gl3/colorImage.vert";
+		colorSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl3/colorImage.frag";
+	}
+	else
+	{
+		colorSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/colorImage.frag";
+	}
 	colorShader.setup(colorSettings);
 }
 
@@ -41,7 +57,6 @@ void ofApp::draw()
 	ofMultMatrix(zed.getTrackedPose());
 	ofDrawAxis(0.3);
 	ofDrawBox(0.1);
-	ofSetColor(ofColor::white);
 	zed.getPointsVbo().draw(GL_POINTS, 0, zed.zedWidth * zed.zedHeight);
 	ofPopMatrix();
 

@@ -26,6 +26,7 @@ class ofApp : public ofBaseApp{
 
 		ofShader depthShader;
 		ofShader colorShader;
+		ofShader pointsShader;
 
 		ofEasyCam cam;
 };

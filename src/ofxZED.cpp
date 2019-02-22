@@ -74,11 +74,11 @@ namespace ofxZED
 
 
 		colorTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_RGBA);
-		depthTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
+		depthTextures[CAPTURE_LEFT].allocate(zedWidth, zedHeight, GL_R32F);
 		if (bCaptureStereo)
 		{
 			colorTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_RGBA);
-			depthTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_LUMINANCE32F_ARB);
+			depthTextures[CAPTURE_RIGHT].allocate(zedWidth, zedHeight, GL_R32F);
 		}
 
 		bRequestNewFrame = true;
@@ -205,11 +205,15 @@ namespace ofxZED
 								int numPoints = zedWidth * zedHeight;
 								if (pointsVbo.getNumVertices() < numPoints)
 								{
+									// We only need every 4th value for color and could pack everything in the points array,
+									// but doing it this way allows the VBO to be drawn without a custom shader.
 									pointsVbo.setVertexData(pointsMat.getPtr<float>(), 3, numPoints, GL_DYNAMIC_DRAW, sizeof(float) * 4);
+									pointsVbo.setColorData(pointsMat.getPtr<float>(), numPoints, GL_DYNAMIC_DRAW, sizeof(float) * 4);
 								}
 								else
 								{
 									pointsVbo.updateVertexData(pointsMat.getPtr<float>(), numPoints);
+									pointsVbo.updateColorData(pointsMat.getPtr<float>(), numPoints);
 								}
 							}
 							else 

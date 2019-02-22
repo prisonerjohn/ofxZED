@@ -1,46 +1,44 @@
 #include "ofApp.h"
 
-#define STRINGIFY(x) #x
-
-static string depthFragmentShader =
-STRINGIFY(
-	uniform sampler2DRect tex;
-void main()
-{
-	vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
-	float value = col.r;
-	float low1 = 0.5;
-	float high1 = 5.0;
-	float low2 = 1.0;
-	float high2 = 0.0;
-	float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
-	if (d == 1.0) {
-		d = 0.0;
-	}
-	gl_FragColor = vec4(vec3(d), 1.0);
-}
-);
-
-static string colorFragmentShader =
-STRINGIFY(
-	uniform sampler2DRect tex;
-void main()
-{
-	vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
-	gl_FragColor = vec4(col.b, col.g, col.r, col.a);
-}
-);
-
 //--------------------------------------------------------------
 void ofApp::setup()
 {
 	zed.init();
 
-	depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
-	depthShader.linkProgram();
+	ofShaderSettings depthSettings;
+	depthSettings.bindDefaults = true;
+	if (ofIsGLProgrammableRenderer())
+	{
+		depthSettings.shaderFiles[GL_VERTEX_SHADER] = "shaders/gl3/depthMap.vert";
+		depthSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl3/depthMap.frag";
+	}
+	else
+	{
+		depthSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/depthMap.frag";
+	}
+	depthShader.setup(depthSettings);
 
-	colorShader.setupShaderFromSource(GL_FRAGMENT_SHADER, colorFragmentShader);
-	colorShader.linkProgram();
+	ofShaderSettings colorSettings;
+	colorSettings.bindDefaults = true;
+	if (ofIsGLProgrammableRenderer())
+	{
+		colorSettings.shaderFiles[GL_VERTEX_SHADER] = "shaders/gl3/colorImage.vert";
+		colorSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl3/colorImage.frag";
+	}
+	else
+	{
+		colorSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/colorImage.frag";
+	}
+	colorShader.setup(colorSettings);
+
+	ofShaderSettings pointsSettings;
+	pointsSettings.bindDefaults = true;
+	if (ofIsGLProgrammableRenderer())
+	{
+		pointsSettings.shaderFiles[GL_VERTEX_SHADER] = "shaders/gl3/pointCloud.vert";
+		pointsSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl3/pointCloud.frag";
+	}
+	pointsShader.setup(pointsSettings);
 }
 
 //--------------------------------------------------------------
@@ -63,16 +61,34 @@ void ofApp::draw()
 	depthShader.end();
 
 	cam.begin();
-	ofPushMatrix();
-	ofScale(100, 100, 100);
-	ofMultMatrix(zed.getTrackedPose());
-	ofDrawAxis(0.3);
-	ofDrawBox(0.1);
-	ofSetColor(ofColor::white);
-	zed.getPointsVbo().draw(GL_POINTS, 0, zed.zedWidth * zed.zedHeight);
-	ofPopMatrix();
+	ofEnableDepthTest();
+	{
+		ofPushMatrix();
+		ofScale(100, 100, 100);
+		ofMultMatrix(zed.getTrackedPose());
+		{
+			ofDrawAxis(0.3);
+			ofDrawBox(0.1);
 
-	ofDrawAxis(100);
+			if (ofIsGLProgrammableRenderer())
+			{
+				pointsShader.begin();
+			}
+			else
+			{
+				zed.getPointsVbo().disableColors();
+			}
+			zed.getPointsVbo().draw(GL_POINTS, 0, zed.zedWidth * zed.zedHeight);
+			if (ofIsGLProgrammableRenderer())
+			{
+				pointsShader.end();
+			}
+		}
+		ofPopMatrix();
+
+		ofDrawAxis(100);
+	}
+	ofDisableDepthTest();
 	cam.end();
 
 	ofDrawBitmapStringHighlight(ofToString(ofGetFrameRate()), 10, 20);

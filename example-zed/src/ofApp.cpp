@@ -30,6 +30,15 @@ void ofApp::setup()
 		colorSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl2/colorImage.frag";
 	}
 	colorShader.setup(colorSettings);
+
+	ofShaderSettings pointsSettings;
+	pointsSettings.bindDefaults = true;
+	if (ofIsGLProgrammableRenderer())
+	{
+		pointsSettings.shaderFiles[GL_VERTEX_SHADER] = "shaders/gl3/pointCloud.vert";
+		pointsSettings.shaderFiles[GL_FRAGMENT_SHADER] = "shaders/gl3/pointCloud.frag";
+	}
+	pointsShader.setup(pointsSettings);
 }
 
 //--------------------------------------------------------------
@@ -52,15 +61,34 @@ void ofApp::draw()
 	depthShader.end();
 
 	cam.begin();
-	ofPushMatrix();
-	ofScale(100, 100, 100);
-	ofMultMatrix(zed.getTrackedPose());
-	ofDrawAxis(0.3);
-	ofDrawBox(0.1);
-	zed.getPointsVbo().draw(GL_POINTS, 0, zed.zedWidth * zed.zedHeight);
-	ofPopMatrix();
+	ofEnableDepthTest();
+	{
+		ofPushMatrix();
+		ofScale(100, 100, 100);
+		ofMultMatrix(zed.getTrackedPose());
+		{
+			ofDrawAxis(0.3);
+			ofDrawBox(0.1);
 
-	ofDrawAxis(100);
+			if (ofIsGLProgrammableRenderer())
+			{
+				pointsShader.begin();
+			}
+			else
+			{
+				zed.getPointsVbo().disableColors();
+			}
+			zed.getPointsVbo().draw(GL_POINTS, 0, zed.zedWidth * zed.zedHeight);
+			if (ofIsGLProgrammableRenderer())
+			{
+				pointsShader.end();
+			}
+		}
+		ofPopMatrix();
+
+		ofDrawAxis(100);
+	}
+	ofDisableDepthTest();
 	cam.end();
 
 	ofDrawBitmapStringHighlight(ofToString(ofGetFrameRate()), 10, 20);

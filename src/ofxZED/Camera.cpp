@@ -21,6 +21,7 @@ namespace ofxZED
 		, bPointsEnabled(true)
 		, bPointsNeedsUpdate(false)
 		, bPoseEnabled(false)
+		, bSensorsEnabled(false)
 	{
 
 	}
@@ -48,6 +49,8 @@ namespace ofxZED
 
 		this->info = this->camera.getCameraInformation();
 		ofLogVerbose(__FUNCTION__) << "Success " << sl::toString(this->info.camera_model) << " (" << sl::toString(this->info.input_type) << ") with serial no " << this->info.serial_number;
+
+		this->bSensorsEnabled = this->initParams.sensors_required;
 
 		this->threadFrame = -1;
 		this->updateFrame = 0;
@@ -154,6 +157,15 @@ namespace ofxZED
 				if (state != sl::POSITIONAL_TRACKING_STATE::OK)
 				{
 					ofLogWarning(__FUNCTION__) << "Tracking state " << sl::toString(state);
+				}
+			}
+
+			if (this->isSensorsEnabled())
+			{
+				auto result = this->camera.getSensorsData(this->sensorsData, sl::TIME_REFERENCE::IMAGE);
+				if (result != sl::ERROR_CODE::SUCCESS)
+				{
+					ofLogError(__FUNCTION__) << "Sensors failed with code " << result << ": " << sl::toString(result);
 				}
 			}
 		}
@@ -382,6 +394,54 @@ namespace ofxZED
 	{
 		return this->pose.timestamp.getMilliseconds();
 	}
+
+	void Camera::setSensorsEnabled(bool enabled)
+	{
+		this->bSensorsEnabled = enabled;
+	}
+
+	bool Camera::isSensorsEnabled()
+	{
+		return this->bSensorsEnabled && this->initParams.sensors_required;
+	}
+
+	glm::vec3 Camera::getIMUTranslation() const
+	{
+		const auto t = this->sensorsData.imu.pose.getTranslation();
+		return glm::vec3(t.x, t.y, t.z);
+	}
+
+	glm::quat Camera::getIMUOrientation() const
+	{
+		const auto o = this->sensorsData.imu.pose.getOrientation();
+		return glm::quat(o.w, o.x, o.y, o.z);
+	}
+
+	glm::mat4 Camera::getIMUTransform() const
+	{
+		auto transform = glm::mat4(1.0);
+		transform *= glm::translate(this->getIMUTranslation());
+		transform *= glm::toMat4(this->getIMUOrientation());
+		return transform;
+	}
+
+	glm::vec3 Camera::getIMULinearAcceleration() const
+	{
+		const auto la = this->sensorsData.imu.linear_acceleration;
+		return glm::vec3(la.x, la.y, la.z);
+	}
+
+	glm::vec3 Camera::getIMUAngularVelocity() const
+	{
+		const auto av = this->sensorsData.imu.angular_velocity;
+		return glm::vec3(av.x, av.y, av.z);
+	}
+
+	uint64_t Camera::getIMUMillis() const
+	{
+		return this->sensorsData.imu.timestamp.getMilliseconds();
+	}
+
 	const sl::Camera& Camera::getNativeCamera() const
 	{
 		return this->camera;

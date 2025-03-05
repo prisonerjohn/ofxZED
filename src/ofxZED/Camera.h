@@ -66,6 +66,16 @@ namespace ofxZED
 		glm::quat getPoseOrientation() const;
 		glm::mat4 getPoseTransform() const;
 		uint64_t getPoseMillis() const;
+
+		void setSensorsEnabled(bool enabled);
+		bool isSensorsEnabled();
+		glm::vec3 getIMUTranslation() const;
+		glm::quat getIMUOrientation() const;
+		glm::mat4 getIMUTransform() const;
+		glm::vec3 getIMULinearAcceleration() const;
+		glm::vec3 getIMUAngularVelocity() const;
+		uint64_t getIMUMillis() const;
+
 		const sl::Camera& getNativeCamera() const;
 
 	public:
@@ -114,6 +124,11 @@ namespace ofxZED
 
 		sl::Pose pose;
 		bool bPoseEnabled;
+
+		sl::SensorsData sensorsData;
+		bool bSensorsEnabled;
+		bool bSensorsNeedsUpdate;
+
 		bool bRunning;
 
 		int threadFrame;

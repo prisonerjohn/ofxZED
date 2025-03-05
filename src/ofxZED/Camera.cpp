@@ -20,6 +20,7 @@ namespace ofxZED
 		, bNormalsNeedsUpdate(false)
 		, bPointsEnabled(true)
 		, bPointsNeedsUpdate(false)
+		, bPoseEnabled(false)
 	{
 
 	}
@@ -27,7 +28,6 @@ namespace ofxZED
 	Camera::~Camera()
 	{
 		this->close();
-		this->waitForThread();
 	}
 
 	bool Camera::open(InitParameters params)
@@ -73,6 +73,11 @@ namespace ofxZED
 		ofRemoveListener(ofEvents().update, this, &Camera::update);
 		this->stopThread();
 		this->bRunning = false;
+
+		this->waitForThread();
+		
+		this->setPoseDisabled();
+		this->camera.close();
 
 		return true;
 	}
@@ -141,6 +146,15 @@ namespace ofxZED
 					}
 				}
 				this->bPointsNeedsUpdate = true;
+			}
+
+			if (this->isPoseEnabled())
+			{
+				auto state = this->camera.getPosition(this->pose, sl::REFERENCE_FRAME::WORLD);
+				if (state != sl::POSITIONAL_TRACKING_STATE::OK)
+				{
+					ofLogWarning(__FUNCTION__) << "Tracking state " << sl::toString(state);
+				}
 			}
 		}
 	}
@@ -320,6 +334,54 @@ namespace ofxZED
 		return this->pointsMesh;
 	}
 
+	void Camera::setPoseEnabled(PositionalTrackingParameters params)
+	{
+		auto result = this->camera.enablePositionalTracking(params);
+		if (result != sl::ERROR_CODE::SUCCESS)
+		{
+			ofLogError(__FUNCTION__) << "Failed with code " << result << ": " << sl::toString(result);
+			this->bPoseEnabled = false;
+			return;
+		}
+
+		this->bPoseEnabled = true;
+	}
+
+	void Camera::setPoseDisabled()
+	{
+		this->camera.disablePositionalTracking();
+		this->bPoseEnabled = false;
+	}
+
+	bool Camera::isPoseEnabled() const
+	{
+		return this->bPoseEnabled;
+	}
+
+	glm::vec3 Camera::getPoseTranslation() const
+	{
+		const auto t = this->pose.getTranslation();
+		return glm::vec3(t.x, t.y, t.z);
+	}
+
+	glm::quat Camera::getPoseOrientation() const
+	{
+		const auto o = this->pose.getOrientation();
+		return glm::quat(o.w, o.x, o.y, o.z);
+	}
+
+	glm::mat4 Camera::getPoseTransform() const
+	{
+		auto transform = glm::mat4(1.0);
+		transform *= glm::translate(this->getPoseTranslation());
+		transform *= glm::toMat4(this->getPoseOrientation());
+		return transform;
+	}
+
+	uint64_t Camera::getPoseMillis() const
+	{
+		return this->pose.timestamp.getMilliseconds();
+	}
 	const sl::Camera& Camera::getNativeCamera() const
 	{
 		return this->camera;

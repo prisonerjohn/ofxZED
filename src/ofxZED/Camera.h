@@ -12,6 +12,7 @@
 namespace ofxZED
 {
 	typedef sl::InitParameters InitParameters;
+	typedef sl::PositionalTrackingParameters PositionalTrackingParameters;
 
 	class Camera
 		: ofThread
@@ -58,6 +59,13 @@ namespace ofxZED
 		bool isPointsEnabled() const;
 		const ofVboMesh& getPointsMesh() const;
 
+		void setPoseEnabled(PositionalTrackingParameters params = PositionalTrackingParameters());
+		void setPoseDisabled();
+		bool isPoseEnabled() const;
+		glm::vec3 getPoseTranslation() const;
+		glm::quat getPoseOrientation() const;
+		glm::mat4 getPoseTransform() const;
+		uint64_t getPoseMillis() const;
 		const sl::Camera& getNativeCamera() const;
 
 	public:
@@ -104,6 +112,8 @@ namespace ofxZED
 		bool bPointsEnabled;
 		bool bPointsNeedsUpdate;
 
+		sl::Pose pose;
+		bool bPoseEnabled;
 		bool bRunning;
 
 		int threadFrame;

@@ -22,13 +22,15 @@ namespace ofxZED
 		, bPointsNeedsUpdate(false)
 		, bPoseEnabled(false)
 		, bSensorsEnabled(false)
-	{
-
-	}
+		, bSensorsNeedsUpdate(false)
+		, bBodiesEnabled(false)
+		, bBodiesNeedsUpdate(false)
+	{}
 
 	Camera::~Camera()
 	{
 		this->close();
+		this->waitForThread(false);
 	}
 
 	bool Camera::open(InitParameters params)
@@ -61,6 +63,8 @@ namespace ofxZED
 		this->bConfidenceNeedsUpdate = false;
 		this->bNormalsNeedsUpdate = false;
 		this->bPointsNeedsUpdate = false;
+		this->bSensorsNeedsUpdate = false;
+		this->bBodiesNeedsUpdate = false;
 
 		ofAddListener(ofEvents().update, this, &Camera::update);
 		this->startThread();
@@ -74,11 +78,14 @@ namespace ofxZED
 		if (!this->bRunning) return false;
 
 		ofRemoveListener(ofEvents().update, this, &Camera::update);
+		
+		std::unique_lock<std::mutex> ulm(this->mutex);
 		this->stopThread();
+		this->condition.notify_all();
+		
 		this->bRunning = false;
 
-		this->waitForThread();
-		
+		this->setBodiesDisabled();
 		this->setPoseDisabled();
 		this->camera.close();
 
@@ -89,6 +96,11 @@ namespace ofxZED
 	{
 		while (isThreadRunning())
 		{
+			// Lock the mutex until the end of the block.
+			std::unique_lock<std::mutex> ulm(this->mutex);
+
+			ofLogVerbose(__FUNCTION__) << "Begin... " << this->threadFrame << "::" << this->updateFrame;
+
 			auto result = this->camera.grab();
 			if (result != sl::ERROR_CODE::SUCCESS)
 			{
@@ -168,11 +180,65 @@ namespace ofxZED
 					ofLogError(__FUNCTION__) << "Sensors failed with code " << result << ": " << sl::toString(result);
 				}
 			}
+
+			if (this->isBodiesEnabled())
+			{
+				this->camera.retrieveBodies(this->bodies, this->bodiesRTParams);
+
+				//if (this->bodies.is_new)
+				{
+					if (this->bodiesOptions.mask_combined)
+					{
+						this->bodiesPixels.allocate(this->colorMat.getWidth(), this->colorMat.getHeight(), 1);
+						this->bodiesPixels.set(0);
+					}
+
+					this->bodiesData.resize(this->bodies.body_list.size());
+					for (size_t i = 0; i < this->bodies.body_list.size(); ++i)
+					{
+						sl::BodyData& b = this->bodies.body_list[i];
+
+						if (this->bodiesData[i] == nullptr)
+						{
+							this->bodiesData[i] = std::make_shared<BodyData>();
+						}
+
+						auto d = this->bodiesData[i];
+						d->set(b, this->bodiesOptions, this->colorMat.getWidth(), this->colorMat.getHeight());
+
+						if (this->bodiesOptions.mask_combined)
+						{
+							auto pixelsData = this->bodiesPixels.getData();
+							unsigned char v = b.id % 255;
+							const auto maskData = b.mask.getPtr<sl::uchar1>(sl::MEM::CPU);
+							for (size_t y = 0; y < b.mask.getHeight(); ++y)
+							{
+								for (size_t x = 0; x < b.mask.getWidth(); ++x)
+								{
+									const size_t m = y * b.mask.getWidth() + x;
+									const size_t p = (b.bounding_box_2d[0].y + y) * this->bodiesPixels.getWidth() + (b.bounding_box_2d[0].x + x);
+									pixelsData[p] = maskData[m] ? v : 0;
+								}
+							}
+						}
+					}
+					this->bBodiesNeedsUpdate = true;
+				}
+			}
+
+			ofLogVerbose(__FUNCTION__) << "Done! " << this->threadFrame << "::" << this->updateFrame;
+
+			// Wait for the main thread to finish.
+			this->condition.wait(ulm);
 		}
 	}
 
 	void Camera::update(ofEventArgs& args)
 	{
+		std::unique_lock<std::mutex> ulm(this->mutex);
+
+		ofLogVerbose(__FUNCTION__) << "Begin... " << this->threadFrame << "::" << this->updateFrame;
+
 		++this->updateFrame;
 
 		if (this->bColorNeedsUpdate)
@@ -219,6 +285,27 @@ namespace ofxZED
 			this->bPointsNeedsUpdate = false;
 			this->threadFrame = this->updateFrame;
 		}
+
+		if (this->bBodiesNeedsUpdate)
+		{
+			if (this->bodiesOptions.mask_split)
+			{
+				for (auto d : this->bodiesData)
+				{
+					d->updateMask();
+				}
+			}
+			if (this->bodiesOptions.mask_combined)
+			{
+				this->bodiesTexture.loadData(this->bodiesPixels);
+			}
+			this->bBodiesNeedsUpdate = false;
+			this->threadFrame = this->updateFrame;
+		}
+
+		ofLogVerbose(__FUNCTION__) << "Done! " << this->threadFrame << "::" << this->updateFrame;
+
+		this->condition.notify_all();
 	}
 
 	bool Camera::isRunning() const
@@ -229,6 +316,11 @@ namespace ofxZED
 	bool Camera::isFrameNew() const
 	{
 		return this->threadFrame == this->updateFrame;
+	}
+
+	const sl::Camera& Camera::getNativeCamera() const
+	{
+		return this->camera;
 	}
 
 	void Camera::setColorEnabled(bool enabled)
@@ -346,17 +438,23 @@ namespace ofxZED
 		return this->pointsMesh;
 	}
 
-	void Camera::setPoseEnabled(PositionalTrackingParameters params)
+	bool Camera::setPoseEnabled(PositionalTrackingParameters params)
 	{
+		if (this->isPoseEnabled())
+		{
+			this->setPoseDisabled();
+		}
+
 		auto result = this->camera.enablePositionalTracking(params);
 		if (result != sl::ERROR_CODE::SUCCESS)
 		{
 			ofLogError(__FUNCTION__) << "Failed with code " << result << ": " << sl::toString(result);
 			this->bPoseEnabled = false;
-			return;
+			return false;
 		}
 
 		this->bPoseEnabled = true;
+		return true;
 	}
 
 	void Camera::setPoseDisabled()
@@ -442,8 +540,60 @@ namespace ofxZED
 		return this->sensorsData.imu.timestamp.getMilliseconds();
 	}
 
-	const sl::Camera& Camera::getNativeCamera() const
+	bool Camera::setBodiesEnabled(BodyTrackingOptions options, BodyTrackingParameters params, BodyTrackingRuntimeParameters rtParams)
 	{
-		return this->camera;
+		if (params.enable_tracking && !this->isPoseEnabled())
+		{
+			if (!this->setPoseEnabled())
+			{
+				return false;
+			}
+		}
+		
+		if (this->isBodiesEnabled())
+		{
+			this->setBodiesDisabled();
+		}
+
+		auto result = this->camera.enableBodyTracking(params);
+		if (result != sl::ERROR_CODE::SUCCESS)
+		{
+			ofLogError(__FUNCTION__) << "Failed with code " << result << ": " << sl::toString(result);
+			this->bBodiesEnabled = false;
+			return false;
+		}
+
+		this->bodiesOptions = options;
+		this->bodiesRTParams = rtParams;
+
+		this->bBodiesEnabled = true;
+		return true;
+	}
+
+	void Camera::setBodiesDisabled()
+	{
+		this->camera.disableBodyTracking();
+		this->bodiesData.clear();
+		this->bBodiesEnabled = false;
+	}
+
+	bool Camera::isBodiesEnabled() const
+	{
+		return this->bBodiesEnabled;
+	}
+
+	const std::vector<std::shared_ptr<BodyData>>& Camera::getBodiesData() const
+	{
+		return this->bodiesData;
+	}
+
+	const ofPixels& Camera::getBodiesPixels() const
+	{
+		return this->bodiesPixels;
+	}
+
+	const ofTexture& Camera::getBodiesTexture() const
+	{
+		return this->bodiesTexture;
 	}
 }

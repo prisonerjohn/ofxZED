@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Body.h"
+
 #include "sl/Camera.hpp"
 
 #include "ofEvents.h"
@@ -13,6 +15,8 @@ namespace ofxZED
 {
 	typedef sl::InitParameters InitParameters;
 	typedef sl::PositionalTrackingParameters PositionalTrackingParameters;
+	typedef sl::BodyTrackingParameters BodyTrackingParameters;
+	typedef sl::BodyTrackingRuntimeParameters BodyTrackingRuntimeParameters;
 
 	class Camera
 		: ofThread
@@ -29,6 +33,8 @@ namespace ofxZED
 
 		bool isRunning() const;
 		bool isFrameNew() const;
+
+		const sl::Camera& getNativeCamera() const;
 
 		void setColorEnabled(bool enabled);
 		bool isColorEnabled() const;
@@ -59,7 +65,7 @@ namespace ofxZED
 		bool isPointsEnabled() const;
 		const ofVboMesh& getPointsMesh() const;
 
-		void setPoseEnabled(PositionalTrackingParameters params = PositionalTrackingParameters());
+		bool setPoseEnabled(PositionalTrackingParameters params = PositionalTrackingParameters());
 		void setPoseDisabled();
 		bool isPoseEnabled() const;
 		glm::vec3 getPoseTranslation() const;
@@ -76,9 +82,12 @@ namespace ofxZED
 		glm::vec3 getIMUAngularVelocity() const;
 		uint64_t getIMUMillis() const;
 
-		const sl::Camera& getNativeCamera() const;
-
-	public:
+		bool setBodiesEnabled(BodyTrackingOptions options, BodyTrackingParameters params = BodyTrackingParameters(), BodyTrackingRuntimeParameters rtParams = BodyTrackingRuntimeParameters());
+		void setBodiesDisabled();
+		bool isBodiesEnabled() const;
+		const std::vector<std::shared_ptr<BodyData>>& getBodiesData() const;
+		const ofPixels& getBodiesPixels() const;
+		const ofTexture& getBodiesTexture() const;
 
 	private:
 		sl::InitParameters initParams;
@@ -129,9 +138,20 @@ namespace ofxZED
 		bool bSensorsEnabled;
 		bool bSensorsNeedsUpdate;
 
+		sl::Bodies bodies;
+		BodyTrackingRuntimeParameters bodiesRTParams;
+		BodyTrackingOptions bodiesOptions;
+		std::vector<std::shared_ptr<BodyData>> bodiesData;
+		ofPixels bodiesPixels;
+		ofTexture bodiesTexture;
+		bool bBodiesEnabled;
+		bool bBodiesNeedsUpdate;
+
 		bool bRunning;
 
 		int threadFrame;
 		int updateFrame;
+
+		std::condition_variable condition;
 	};
 }

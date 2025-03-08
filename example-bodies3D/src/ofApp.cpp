@@ -2,15 +2,14 @@
 
 void ofApp::setup()
 {
-	zed.open();
+	auto initParams = ofxZED::InitParameters();
+	zed.open(initParams);
 
 	auto bodiesOptions = ofxZED::BodyTrackingOptions();
-	bodiesOptions.bounds_2d = true;
-	bodiesOptions.joints_2d = true;
-	bodiesOptions.mask_split = true;
+	bodiesOptions.bounds_3d = true;
+	bodiesOptions.joints_3d = true;
 	auto bodyParams = ofxZED::BodyTrackingParameters();
 	bodyParams.detection_model = sl::BODY_TRACKING_MODEL::HUMAN_BODY_MEDIUM;
-	bodyParams.enable_segmentation = true;
 	bodyParams.enable_body_fitting = true;
 	auto bodyRTParams = ofxZED::BodyTrackingRuntimeParameters();
 	bodyRTParams.detection_confidence_threshold = 40;
@@ -32,45 +31,45 @@ void ofApp::draw()
 {
 	if (zed.isRunning())
 	{
-		zed.getColorTexture().draw(0, 0);
-
-		ofColor c;
-		for (int i = 0; i < zed.getBodiesData().size(); ++i)
+		cam.begin();
+		ofEnableDepthTest();
+		ofPushMatrix();
+		ofMultMatrix(zed.getPoseTransform());
+		ofRotateXDeg(180);
 		{
-			auto body = zed.getBodiesData()[i];
-			
-			c.setHsb(i * 50, 255, 255);
-			
-			// Draw bounds.
-			ofSetColor(c);
-			ofNoFill();
-			drawBounds2D(body->getBounds2D());
-			drawBounds2D(body->getHeadBounds2D());
-			
-			// Draw skeleton.
-			drawBody2D(body->getJoints2D());
+			zed.getPointsMesh().draw();
 
-			// Draw mask.
-			ofEnableBlendMode(OF_BLENDMODE_SCREEN);
+			for (int i = 0; i < zed.getBodiesData().size(); ++i)
 			{
-				c.a = 96;
-				ofSetColor(c);
-				ofFill();
-				body->getMaskTexture().draw(0, 0);
-			}
-			ofEnableBlendMode(OF_BLENDMODE_ALPHA);
-		}
+				auto body = zed.getBodiesData()[i];
 
-		ofSetColor(255);
+				ofColor c;
+				c.setHsb(i * 50, 255, 255);
+				ofSetColor(c);
+
+				// Draw bounds.
+				ofNoFill();
+				drawBounds3D(body->getBounds3D());
+				drawBounds3D(body->getHeadBounds3D());
+				ofFill();
+
+				// Draw skeleton.
+				drawBody3D(body->getJoints3D());
+			}
+			ofSetColor(255);
+		}
+		ofPopMatrix();
+		ofDisableDepthTest();
+		cam.end();
 	}
 }
 
-void ofApp::drawBounds2D(const ofxZED::Bounds2D& bounds)
+void ofApp::drawBounds3D(const ofxZED::Bounds3D& bounds)
 {
-	ofDrawRectangle(bounds.origin, bounds.size.x, bounds.size.y);
+	ofDrawBox(bounds.center, bounds.size.x, bounds.size.y, bounds.size.z);
 }
 
-void ofApp::drawBody2D(const std::vector<glm::vec2>& joints)
+void ofApp::drawBody3D(const std::vector<glm::vec3>& joints)
 {
 	if (joints.size() == 18)
 	{

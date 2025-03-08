@@ -23,17 +23,25 @@ namespace ofxZED
 			this->bounds2D.setFromCorners(data.bounding_box_2d[0], data.bounding_box_2d[2]);
 			this->headBounds2D.setFromCorners(data.head_bounding_box_2d[0], data.head_bounding_box_2d[2]);
 		}
-		//if (options.bounds_3d)
-		//{
-		//	this->.bounds3D.setFromCorners(data.bounding_box[0], data.bounding_box[6]);
-		//	this->.headBounds3D.setFromCorners(data.head_bounding_box[0], data.head_bounding_box[6]);
-		//}
+		if (options.bounds_3d)
+		{
+			this->bounds3D.setFromCenterSize(data.position, data.dimensions);
+			this->headBounds3D.setFromCorners(data.head_bounding_box[0], data.head_bounding_box[6]);
+		}
 		if (options.joints_2d)
 		{
 			this->joints2D.resize(data.keypoint_2d.size());
 			for (size_t j = 0; j < data.keypoint_2d.size(); ++j)
 			{
 				this->joints2D[j] = glm::vec2(data.keypoint_2d[j].x, data.keypoint_2d[j].y);
+			}
+		}
+		if (options.joints_3d)
+		{
+			this->joints3D.resize(data.keypoint.size());
+			for (size_t j = 0; j < data.keypoint.size(); ++j)
+			{
+				this->joints3D[j] = glm::vec3(data.keypoint[j].x, data.keypoint[j].y, data.keypoint[j].z);
 			}
 		}
 		if (options.mask_split)
@@ -92,6 +100,21 @@ namespace ofxZED
 	const std::vector<glm::vec2>& BodyData::getJoints2D() const
 	{
 		return this->joints2D;
+	}
+
+	const Bounds3D& BodyData::getBounds3D() const
+	{
+		return this->bounds3D;
+	}
+
+	const Bounds3D& BodyData::getHeadBounds3D() const
+	{
+		return this->headBounds3D;
+	}
+
+	const std::vector<glm::vec3>& BodyData::getJoints3D() const
+	{
+		return this->joints3D;
 	}
 
 	const ofPixels& BodyData::getMaskPixels() const

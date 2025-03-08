@@ -24,6 +24,7 @@ namespace ofxZED
 		glm::vec3 center;
 		glm::vec3 size;
 
-		void setFromCorners(sl::float3 mn, sl::float3 mx);
+		void setFromCenterSize(sl::float3 center, sl::float3 size);
+		void setFromCorners(sl::float3 tlf, sl::float3 brb);
 	};
 }

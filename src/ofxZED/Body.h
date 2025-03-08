@@ -50,6 +50,10 @@ namespace ofxZED
 		const Bounds2D& getHeadBounds2D() const;
 		const std::vector<glm::vec2>& getJoints2D() const;
 
+		const Bounds3D& getBounds3D() const;
+		const Bounds3D& getHeadBounds3D() const;
+		const std::vector<glm::vec3>& getJoints3D() const;
+
 		const ofPixels& getMaskPixels() const;
 		const ofTexture& getMaskTexture() const;
 

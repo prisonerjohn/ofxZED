@@ -80,5 +80,7 @@ android/armeabi:
 android/armeabi-v7a:	
 
 vs:
+	ADDON_INCLUDES += $(ZED_SDK_ROOT_DIR)\include
 	ADDON_INCLUDES += $(CUDA_PATH)\include
+	ADDON_LIBS += $(ZED_SDK_ROOT_DIR)\lib\sl_zed64.lib
 	ADDON_LIBS += $(CUDA_PATH)\lib\x64\cuda.lib

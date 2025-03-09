@@ -23,6 +23,8 @@ namespace ofxZED
 		, bPoseEnabled(false)
 		, bSensorsEnabled(false)
 		, bSensorsNeedsUpdate(false)
+		, bObjectsEnabled(false)
+		, bObjectsNeedsUpdate(false)
 		, bBodiesEnabled(false)
 		, bBodiesNeedsUpdate(false)
 	{}
@@ -64,6 +66,7 @@ namespace ofxZED
 		this->bNormalsNeedsUpdate = false;
 		this->bPointsNeedsUpdate = false;
 		this->bSensorsNeedsUpdate = false;
+		this->bObjectsNeedsUpdate = false;
 		this->bBodiesNeedsUpdate = false;
 
 		ofAddListener(ofEvents().update, this, &Camera::update);
@@ -85,6 +88,7 @@ namespace ofxZED
 		
 		this->bRunning = false;
 
+		this->setObjectsDisabled();
 		this->setBodiesDisabled();
 		this->setPoseDisabled();
 		this->camera.close();
@@ -178,6 +182,51 @@ namespace ofxZED
 				if (result != sl::ERROR_CODE::SUCCESS)
 				{
 					ofLogError(__FUNCTION__) << "Sensors failed with code " << result << ": " << sl::toString(result);
+				}
+			}
+
+			if (this->isObjectsEnabled())
+			{
+				this->camera.retrieveObjects(this->objects, this->objectsRTParams);
+
+				//if (this->objects.is_new)
+				{
+					if (this->objectsOptions.mask_combined)
+					{
+						this->objectsPixels.allocate(this->colorMat.getWidth(), this->colorMat.getHeight(), 1);
+						this->objectsPixels.set(0);
+					}
+
+					this->objectsData.resize(this->objects.object_list.size());
+					for (size_t i = 0; i < this->objects.object_list.size(); ++i)
+					{
+						sl::ObjectData& o = this->objects.object_list[i];
+
+						if (this->objectsData[i] == nullptr)
+						{
+							this->objectsData[i] = std::make_shared<ObjectData>();
+						}
+
+						auto d = this->objectsData[i];
+						d->set(o, this->objectsOptions, this->colorMat.getWidth(), this->colorMat.getHeight());
+
+						if (this->objectsOptions.mask_combined)
+						{
+							auto pixelsData = this->objectsPixels.getData();
+							unsigned char v = o.id % 255;
+							const auto maskData = o.mask.getPtr<sl::uchar1>(sl::MEM::CPU);
+							for (size_t y = 0; y < o.mask.getHeight(); ++y)
+							{
+								for (size_t x = 0; x < o.mask.getWidth(); ++x)
+								{
+									const size_t m = y * o.mask.getWidth() + x;
+									const size_t p = (o.bounding_box_2d[0].y + y) * this->objectsPixels.getWidth() + (o.bounding_box_2d[0].x + x);
+									pixelsData[p] = maskData[m] ? v : 0;
+								}
+							}
+						}
+					}
+					this->bObjectsNeedsUpdate = true;
 				}
 			}
 
@@ -283,6 +332,23 @@ namespace ofxZED
 			this->pointsMesh.getVertices().assign(this->pointsPositions.data(), this->pointsPositions.data() + this->pointsPositions.size());
 			this->pointsMesh.getColors().assign(this->pointsColors.data(), this->pointsColors.data() + this->pointsColors.size());
 			this->bPointsNeedsUpdate = false;
+			this->threadFrame = this->updateFrame;
+		}
+
+		if (this->bObjectsNeedsUpdate)
+		{
+			if (this->objectsOptions.mask_split)
+			{
+				for (auto d : this->objectsData)
+				{
+					d->updateMask();
+				}
+			}
+			if (this->objectsOptions.mask_combined)
+			{
+				this->objectsTexture.loadData(this->objectsPixels);
+			}
+			this->bObjectsNeedsUpdate = false;
 			this->threadFrame = this->updateFrame;
 		}
 
@@ -538,6 +604,63 @@ namespace ofxZED
 	uint64_t Camera::getIMUMillis() const
 	{
 		return this->sensorsData.imu.timestamp.getMilliseconds();
+	}
+
+	bool Camera::setObjectsEnabled(ObjectDetectionOptions options, ObjectDetectionParameters params, ObjectDetectionRuntimeParameters rtParams)
+	{
+		if (params.enable_tracking && !this->isPoseEnabled())
+		{
+			if (!this->setPoseEnabled())
+			{
+				return false;
+			}
+		}
+
+		if (this->isObjectsEnabled())
+		{
+			this->setObjectsDisabled();
+		}
+
+		auto result = this->camera.enableObjectDetection(params);
+		if (result != sl::ERROR_CODE::SUCCESS)
+		{
+			ofLogError(__FUNCTION__) << "Failed with code " << result << ": " << sl::toString(result);
+			this->bObjectsEnabled = false;
+			return false;
+		}
+
+		this->objectsOptions = options;
+		this->objectsRTParams = rtParams;
+
+		this->bObjectsEnabled = true;
+		return true;
+	}
+
+	void Camera::setObjectsDisabled()
+	{
+		this->camera.disableObjectDetection();
+		this->objectsData.clear();
+		this->bObjectsEnabled = false;
+	}
+
+	bool Camera::isObjectsEnabled() const
+	{
+		return this->bObjectsEnabled;
+	}
+
+	const std::vector<std::shared_ptr<ObjectData>>& Camera::getObjectsData() const
+	{
+		return this->objectsData;
+	}
+
+	const ofPixels& Camera::getObjectsPixels() const
+	{
+		return this->objectsPixels;
+	}
+
+	const ofTexture& Camera::getObjectsTexture() const
+	{
+		return this->objectsTexture;
 	}
 
 	bool Camera::setBodiesEnabled(BodyTrackingOptions options, BodyTrackingParameters params, BodyTrackingRuntimeParameters rtParams)

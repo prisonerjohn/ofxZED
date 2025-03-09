@@ -2,8 +2,7 @@
 
 void ofApp::setup()
 {
-	auto initParams = ofxZED::InitParameters();
-	zed.open(initParams);
+	zed.open();
 
 	auto bodiesOptions = ofxZED::BodyTrackingOptions();
 	bodiesOptions.bounds_3d = true;

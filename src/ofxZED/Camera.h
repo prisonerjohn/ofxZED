@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Body.h"
+#include "Object.h"
+#include "Util.h"
 
 #include "sl/Camera.hpp"
 
@@ -13,11 +15,6 @@
 
 namespace ofxZED
 {
-	typedef sl::InitParameters InitParameters;
-	typedef sl::PositionalTrackingParameters PositionalTrackingParameters;
-	typedef sl::BodyTrackingParameters BodyTrackingParameters;
-	typedef sl::BodyTrackingRuntimeParameters BodyTrackingRuntimeParameters;
-
 	class Camera
 		: ofThread
 	{
@@ -82,6 +79,13 @@ namespace ofxZED
 		glm::vec3 getIMUAngularVelocity() const;
 		uint64_t getIMUMillis() const;
 
+		bool setObjectsEnabled(ObjectDetectionOptions options, ObjectDetectionParameters params = ObjectDetectionParameters(), ObjectDetectionRuntimeParameters rtParams = ObjectDetectionRuntimeParameters());
+		void setObjectsDisabled();
+		bool isObjectsEnabled() const;
+		const std::vector<std::shared_ptr<ObjectData>>& getObjectsData() const;
+		const ofPixels& getObjectsPixels() const;
+		const ofTexture& getObjectsTexture() const;
+
 		bool setBodiesEnabled(BodyTrackingOptions options, BodyTrackingParameters params = BodyTrackingParameters(), BodyTrackingRuntimeParameters rtParams = BodyTrackingRuntimeParameters());
 		void setBodiesDisabled();
 		bool isBodiesEnabled() const;
@@ -137,6 +141,15 @@ namespace ofxZED
 		sl::SensorsData sensorsData;
 		bool bSensorsEnabled;
 		bool bSensorsNeedsUpdate;
+
+		sl::Objects objects;
+		ObjectDetectionRuntimeParameters objectsRTParams;
+		ObjectDetectionOptions objectsOptions;
+		std::vector<std::shared_ptr<ObjectData>> objectsData;
+		ofPixels objectsPixels;
+		ofTexture objectsTexture;
+		bool bObjectsEnabled;
+		bool bObjectsNeedsUpdate;
 
 		sl::Bodies bodies;
 		BodyTrackingRuntimeParameters bodiesRTParams;

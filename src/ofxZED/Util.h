@@ -6,6 +6,15 @@
 
 namespace ofxZED
 {
+	typedef sl::InitParameters InitParameters;
+	typedef sl::PositionalTrackingParameters PositionalTrackingParameters;
+	typedef sl::ObjectDetectionParameters  ObjectDetectionParameters;
+	typedef sl::ObjectDetectionRuntimeParameters ObjectDetectionRuntimeParameters;
+	typedef sl::BodyTrackingParameters BodyTrackingParameters;
+	typedef sl::BodyTrackingRuntimeParameters BodyTrackingRuntimeParameters;
+
+	typedef sl::OBJECT_CLASS ObjectClass;
+	typedef sl::OBJECT_SUBCLASS ObjectSubclass;
 	typedef sl::OBJECT_TRACKING_STATE ObjectTrackingState;
 	typedef sl::OBJECT_ACTION_STATE ObjectActionState;
 
